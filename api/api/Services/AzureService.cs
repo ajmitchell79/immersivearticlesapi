@@ -48,7 +48,15 @@ namespace api.Services
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<TextAnalyticsResponse>(responseString).Documents.First();
+
+            var serialisedResponse = JsonConvert.DeserializeObject<TextAnalyticsResponse>(responseString);
+
+            if (serialisedResponse.Errors.Length > 0)
+            {
+                throw new Exception(serialisedResponse.Errors.First().Message);
+            }
+
+            return serialisedResponse.Documents.First();
         }
         
         public async Task<BingEntitySearchResponseEntities> GetBingEntityAsync(string entityName)
@@ -113,8 +121,15 @@ namespace api.Services
     public class TextAnalyticsResponse
     {
         public TextAnalyticsResponseDocument[] Documents { get; set; }
+        public TextAnalyticsResponseError[] Errors { get; set; }
     }
-    
+
+    public class TextAnalyticsResponseError
+    {
+        public string Id { get; set; }
+        public string Message { get; set; }
+    }
+
     public class TextAnalyticsResponseDocument
     {
         public string Id { get; set; }

@@ -26,15 +26,19 @@ namespace api.Controllers
             {
                 var result = await azureService.AnalyseTextAsync(request.Text);
 
-                var entities = new List<BingEntitySearchResponseEntityValue>();
-                
+                var entities = new List<EntityInfo>();
+
                 foreach (var entity in result.Entities)
                 {
                     var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
 
                     if (bingEntity?.Value.Length > 0)
                     {
-                        entities.Add(bingEntity.Value[0]);
+                        entities.Add(new EntityInfo
+                        {
+                            Location = entity,
+                            Data = bingEntity.Value[0]
+                        });
                     }
                 }
 
@@ -64,7 +68,13 @@ namespace api.Controllers
     public class EntityInfoResponse
     {
         public string Text { get; set; }
-        public BingEntitySearchResponseEntityValue[] Entities { get; set; }
+        public EntityInfo[] Entities { get; set; }
+    }
+
+    public class EntityInfo
+    {
+        public TextAnalyticsResponseEntity Location { get; set; }
+        public BingEntitySearchResponseEntityValue Data { get; set; }
     }
 
     public class EntityInfoErrorResponse
