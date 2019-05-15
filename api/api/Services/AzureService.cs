@@ -3,12 +3,20 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace api.Services
 {
     public class AzureService
     {
+        private readonly ILogger<AzureService> logger;
+
+        public AzureService(ILogger<AzureService> logger)
+        {
+            this.logger = logger;
+        }
+        
         public async Task<TextAnalyticsResponseDocument> AnalyseTextAsync(string text)
         {
             var httpClient = new HttpClient();
@@ -34,7 +42,9 @@ namespace api.Services
 
             if (!response.IsSuccessStatusCode)
             {
-                
+                var errorResponseString = await response.Content.ReadAsStringAsync();
+                var errorResponse = JsonConvert.DeserializeObject<TextAnalyticsErrorResponse>(errorResponseString);
+                throw new Exception(errorResponse.InnerError.Message);
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
@@ -52,12 +62,27 @@ namespace api.Services
 
             if (!response.IsSuccessStatusCode)
             {
-                
+                var errorResponseString = await response.Content.ReadAsStringAsync();
+                logger.LogError(errorResponseString);
+                return null;
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<BingEntitySearchResponse>(responseString).Entities;
         }
+    }
+
+    public class TextAnalyticsErrorResponse
+    {
+        public string Code { get; set; }
+        public string Message { get; set; }
+        public TextAnalyticsInnerError InnerError { get; set; }
+    }
+
+    public class TextAnalyticsInnerError
+    {
+        public string Code { get; set; }
+        public string Message { get; set; }
     }
 
     public class BingEntitySearchResponse
@@ -99,6 +124,14 @@ namespace api.Services
     public class TextAnalyticsResponseEntity
     {
         public string Name { get; set; }
+        public TextAnalyticsResponseEntityMatch[] Matches { get; set; }
+    }
+
+    public class TextAnalyticsResponseEntityMatch
+    {
+        public string Text { get; set; }
+        public int Offset { get; set; }
+        public int Length { get; set; }
     }
 
     public class JsonContent : StringContent

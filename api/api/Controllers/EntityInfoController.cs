@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using api.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers
@@ -10,27 +11,48 @@ namespace api.Controllers
     [ApiController]
     public class EntityInfoController : ControllerBase
     {
+        private readonly AzureService azureService;
+
+        public EntityInfoController(AzureService azureService)
+        {
+            this.azureService = azureService;
+        }
+        
         // POST api/TextAnalytics
         [HttpPost]
-        public async Task<EntityInfoResponse> Post([FromBody]EntityInfoRequest request)
+        public async Task<ActionResult<EntityInfoResponse>> Post([FromBody]EntityInfoRequest request)
         {
-            var azureService = new AzureService();
-
-            var result = await azureService.AnalyseTextAsync(request.Text);
-
-            var entities = new List<BingEntitySearchResponseEntityValue>();
-            foreach (var entity in result.Entities)
+            try
             {
-                var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
-                entities.Add(bingEntity.Value[0]);
+                var result = await azureService.AnalyseTextAsync(request.Text);
+
+                var entities = new List<BingEntitySearchResponseEntityValue>();
+                
+                foreach (var entity in result.Entities)
+                {
+                    var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
+
+                    if (bingEntity?.Value.Length > 0)
+                    {
+                        entities.Add(bingEntity.Value[0]);
+                    }
+                }
+
+                return new EntityInfoResponse
+                {
+                    Text = request.Text,
+                    Entities = entities.ToArray()
+                };
+
             }
-
-            return new EntityInfoResponse
+            catch (Exception ex)
             {
-                Text = request.Text,
-                Entities = entities.ToArray()
-            };
-            
+                return StatusCode(StatusCodes.Status500InternalServerError, new EntityInfoErrorResponse
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Message = ex.Message
+                });
+            }
         }
     }
     
@@ -43,5 +65,11 @@ namespace api.Controllers
     {
         public string Text { get; set; }
         public BingEntitySearchResponseEntityValue[] Entities { get; set; }
+    }
+
+    public class EntityInfoErrorResponse
+    {
+        public string Message { get; set; }
+        public int Status { get; set; }
     }
 }
