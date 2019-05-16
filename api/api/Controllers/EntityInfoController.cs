@@ -48,6 +48,7 @@ namespace api.Controllers
                     
                     if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhiteList.Contains(e)))
                     {
+                        // Filter out the entity types we don't want
                         continue;
                     }
                     
@@ -61,8 +62,11 @@ namespace api.Controllers
                 return new EntityInfoResponse
                 {
                     Text = request.Text,
-                    Entities = entities.ToArray()
+                    Entities = entities
+                        .OrderBy(e => e.Location.Matches.First().Offset)
+                        .ToArray()
                 };
+               
 
             }
             catch (Exception ex)
