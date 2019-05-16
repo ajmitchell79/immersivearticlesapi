@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace api.Controllers
 {
@@ -13,6 +14,7 @@ namespace api.Controllers
     public class EntityInfoController : ControllerBase
     {
         private readonly AzureService azureService;
+        private readonly ILogger<EntityInfoController> logger;
 
         private string[] entityTypeWhiteList = {
             "City",
@@ -22,9 +24,10 @@ namespace api.Controllers
             "Organization"
         };
 
-        public EntityInfoController(AzureService azureService)
+        public EntityInfoController(AzureService azureService, ILogger<EntityInfoController> logger)
         {
             this.azureService = azureService;
+            this.logger = logger;
         }
         
         // POST api/entities
@@ -58,6 +61,8 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
+                logger.LogError("Internal Server Error", ex);
+                
                 return StatusCode(StatusCodes.Status500InternalServerError, new EntityInfoErrorResponse
                 {
                     Status = StatusCodes.Status500InternalServerError,
