@@ -108,7 +108,7 @@ namespace api.Controllers
             return entities;
         }
 
-        private void UpdateImageIfLocation(BingEntitySearchResponseEntities bingEntity)
+        private static void UpdateImageIfLocation(BingEntitySearchResponseEntities bingEntity)
         {
             if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => locationEntityTypes.Contains(e)))
             {
