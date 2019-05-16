@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -109,7 +108,15 @@ namespace api.Services
         public string BingId { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+        public BingEntitySearchResponseEntityPresentation EntityPresentationInfo { get; set; }  
         public BingEntitySearchResponseEntityValueImage Image { get; set; }        
+    }
+
+    public class BingEntitySearchResponseEntityPresentation
+    {
+        public string EntityScenario { get; set; }
+        public string EntityTypeDisplayHint { get; set; }
+        public string[] EntityTypeHints { get; set; }
     }
 
     public class BingEntitySearchResponseEntityValueImage
@@ -147,12 +154,5 @@ namespace api.Services
         public string Text { get; set; }
         public int Offset { get; set; }
         public int Length { get; set; }
-    }
-
-    public class JsonContent : StringContent
-    {
-        public JsonContent(object obj) :
-            base(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json")
-        { }
     }
 }

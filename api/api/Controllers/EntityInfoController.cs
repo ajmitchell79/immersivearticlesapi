@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using api.Services;
 using Microsoft.AspNetCore.Http;
@@ -12,6 +13,14 @@ namespace api.Controllers
     public class EntityInfoController : ControllerBase
     {
         private readonly AzureService azureService;
+
+        private string[] entityTypeWhiteList = new []
+        {
+            "City",
+            "Country",
+            "Person",
+            "Organization"
+        };
 
         public EntityInfoController(AzureService azureService)
         {
@@ -32,7 +41,12 @@ namespace api.Controllers
                 {
                     var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
 
-                    if (bingEntity?.Value.Length > 0)
+                    if (bingEntity?.Value.Length == 0)
+                    {
+                        continue;
+                    }
+                    
+                    if (bingEntity?.Value[0].EntityPresentationInfo.EntityTypeHints)
                     {
                         entities.Add(new EntityInfo
                         {
