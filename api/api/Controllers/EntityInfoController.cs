@@ -96,9 +96,16 @@ namespace api.Controllers
 
                 UpdateImageIfLocation(bingEntity);
 
+                var location = textAnalysisResult.Entities.FirstOrDefault(e => e.Name.Equals(bingEntity.Value[0].Name));
+
+                if (location == null)
+                {
+                    continue;
+                }
+                
                 entities.Add(new EntityInfo
                 {
-                    Location = textAnalysisResult.Entities.First(e => e.Name.Equals(bingEntity.Value[0].Name)),
+                    Location = location,
                     Data = bingEntity.Value[0]
                 });
             }
@@ -114,6 +121,9 @@ namespace api.Controllers
             }
 
             var image = bingEntity.Value[0].Image;
+            
+            if (image == null)
+                return;
             
             image.HostPageUrl =
                 $"https://dev.virtualearth.net/REST/v1/Imagery/Map/CanvasLight/{UrlEncoder.Default.Encode(bingEntity.Value[0].Name)}?mapSize=500,400&key=AmxOih6m90zBSnPD_jH-HEXIt4M5SxkZZyB4p1FOxFzGLrLTD61bsI94g01aJPCn";
