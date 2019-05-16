@@ -20,9 +20,7 @@ namespace api.Controllers
         private static string[] locationEntityTypes = {
             "City",
             "Country",
-            "Place",
-            "Person",
-            "Organization"
+            "Place"
         };
 
         private static string[] entityTypeWhitelist = new [] {
