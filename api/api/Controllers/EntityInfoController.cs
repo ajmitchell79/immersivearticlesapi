@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using api.Services;
 using Microsoft.AspNetCore.Http;
@@ -16,13 +17,18 @@ namespace api.Controllers
         private readonly AzureService azureService;
         private readonly ILogger<EntityInfoController> logger;
 
-        private string[] entityTypeWhiteList = {
+        private static string[] locationEntityTypes = {
             "City",
             "Country",
             "Place",
             "Person",
             "Organization"
         };
+
+        private static string[] entityTypeWhitelist = new [] {
+            "Person",
+            "Organization"
+        }.Union(locationEntityTypes).ToArray();
 
         public EntityInfoController(AzureService azureService, ILogger<EntityInfoController> logger)
         {
@@ -84,11 +90,13 @@ namespace api.Controllers
                     continue;
                 }
 
-                if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhiteList.Contains(e)))
+                if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhitelist.Contains(e)))
                 {
                     // Filter out the entity types we don't want
                     continue;
                 }
+
+                UpdateImageIfLocation(bingEntity);
 
                 entities.Add(new EntityInfo
                 {
@@ -98,6 +106,20 @@ namespace api.Controllers
             }
 
             return entities;
+        }
+
+        private void UpdateImageIfLocation(BingEntitySearchResponseEntities bingEntity)
+        {
+            if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => locationEntityTypes.Contains(e)))
+            {
+                return;
+            }
+
+            var image = bingEntity.Value[0].Image;
+            
+            image.HostPageUrl =
+                $"https://dev.virtualearth.net/REST/v1/Imagery/Map/CanvasLight/{UrlEncoder.Default.Encode(bingEntity.Value[0].Name)}?mapSize=500,400&key=AmxOih6m90zBSnPD_jH-HEXIt4M5SxkZZyB4p1FOxFzGLrLTD61bsI94g01aJPCn";
+            
         }
     }
    
