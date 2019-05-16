@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace api.Controllers
 {
@@ -13,6 +14,7 @@ namespace api.Controllers
     public class EntityInfoController : ControllerBase
     {
         private readonly AzureService azureService;
+        private readonly ILogger<EntityInfoController> logger;
 
         private string[] entityTypeWhiteList = {
             "City",
@@ -22,42 +24,31 @@ namespace api.Controllers
             "Organization"
         };
 
-        public EntityInfoController(AzureService azureService)
+        public EntityInfoController(AzureService azureService, ILogger<EntityInfoController> logger)
         {
             this.azureService = azureService;
+            this.logger = logger;
         }
         
-        // POST api/TextAnalytics
+        // POST api/entities
         [HttpPost]
         public async Task<ActionResult<EntityInfoResponse>> Post([FromBody]EntityInfoRequest request)
         {
             try
             {
-                var result = await azureService.AnalyseTextAsync(request.Text);
+                // Run Text Analysis once to get all the entities
+                var textAnalysisResult = await azureService.AnalyseTextAsync(request.Text);
 
-                var entities = new List<EntityInfo>();
+                // Run all the Bing search tasks concurrently
+                var entitySearchTasks = textAnalysisResult
+                    .Entities
+                    .Select(e => azureService.GetBingEntityAsync(e.Name))
+                    .ToArray();
 
-                foreach (var entity in result.Entities)
-                {
-                    var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
+                Task.WaitAll(entitySearchTasks);
 
-                    if (bingEntity ==  null || bingEntity.Value.Length == 0)
-                    {
-                        continue;
-                    }
-                    
-                    if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhiteList.Contains(e)))
-                    {
-                        // Filter out the entity types we don't want
-                        continue;
-                    }
-                    
-                    entities.Add(new EntityInfo
-                    {
-                        Location = entity,
-                        Data = bingEntity.Value[0]
-                    });
-                }
+                // Process the Bing responses
+                var entities = ProcessResponses(entitySearchTasks, textAnalysisResult);
 
                 return new EntityInfoResponse
                 {
@@ -66,11 +57,12 @@ namespace api.Controllers
                         .OrderBy(e => e.Location.Matches.First().Offset)
                         .ToArray()
                 };
-               
 
             }
             catch (Exception ex)
             {
+                logger.LogError("Internal Server Error", ex);
+                
                 return StatusCode(StatusCodes.Status500InternalServerError, new EntityInfoErrorResponse
                 {
                     Status = StatusCodes.Status500InternalServerError,
@@ -78,7 +70,37 @@ namespace api.Controllers
                 });
             }
         }
+
+        private List<EntityInfo> ProcessResponses(Task<BingEntitySearchResponseEntities>[] tasks, TextAnalyticsResponseDocument textAnalysisResult)
+        {
+            var entities = new List<EntityInfo>();
+
+            foreach (var task in tasks)
+            {
+                var bingEntity = task.Result;
+
+                if (bingEntity == null || bingEntity.Value.Length == 0)
+                {
+                    continue;
+                }
+
+                if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhiteList.Contains(e)))
+                {
+                    // Filter out the entity types we don't want
+                    continue;
+                }
+
+                entities.Add(new EntityInfo
+                {
+                    Location = textAnalysisResult.Entities.First(e => e.Name.Equals(bingEntity.Value[0].Name)),
+                    Data = bingEntity.Value[0]
+                });
+            }
+
+            return entities;
+        }
     }
+   
     
     public class EntityInfoRequest
     {
