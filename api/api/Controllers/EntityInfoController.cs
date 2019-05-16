@@ -14,10 +14,10 @@ namespace api.Controllers
     {
         private readonly AzureService azureService;
 
-        private string[] entityTypeWhiteList = new []
-        {
+        private string[] entityTypeWhiteList = {
             "City",
             "Country",
+            "Place",
             "Person",
             "Organization"
         };
@@ -41,19 +41,21 @@ namespace api.Controllers
                 {
                     var bingEntity = await azureService.GetBingEntityAsync(entity.Name);
 
-                    if (bingEntity?.Value.Length == 0)
+                    if (bingEntity ==  null || bingEntity.Value.Length == 0)
                     {
                         continue;
                     }
                     
-                    if (bingEntity?.Value[0].EntityPresentationInfo.EntityTypeHints)
+                    if (!bingEntity.Value[0].EntityPresentationInfo.EntityTypeHints.Any(e => entityTypeWhiteList.Contains(e)))
                     {
-                        entities.Add(new EntityInfo
-                        {
-                            Location = entity,
-                            Data = bingEntity.Value[0]
-                        });
+                        continue;
                     }
+                    
+                    entities.Add(new EntityInfo
+                    {
+                        Location = entity,
+                        Data = bingEntity.Value[0]
+                    });
                 }
 
                 return new EntityInfoResponse

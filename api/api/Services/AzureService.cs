@@ -64,7 +64,7 @@ namespace api.Services
             
             httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "f256a10bf91e423f9cabaae0217c0d32");
             
-            var query = $"?q={entityName}&mkt=en-GB";
+            var query = $"?q={entityName}&mkt=en-US";
             var response = await httpClient.GetAsync("https://api.cognitive.microsoft.com/bing/v7.0/entities" + query);
 
             if (!response.IsSuccessStatusCode)
